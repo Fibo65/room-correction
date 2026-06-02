@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#080a0d">
+<title>Room Correction · I Cantori delle Cime</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Cormorant+Garamond:wght@300;400;600&display=swap');
+
+:root {
+  --bg: #080a0d;
+  --surface: #0f1215;
+  --surface2: #141820;
+  --border: #1e2430;
+  --accent: #c8a96e;
+  --accent2: #4e9e8a;
+  --danger: #c86e6e;
+  --warn: #c8a040;
+  --text: #ddd8ce;
+  --muted: #525a68;
+  --mono: 'DM Mono', monospace;
+  --serif: 'Cormorant Garamond', serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  min-height: 100vh;
+  overscroll-behavior: none;
+}
+
+body { padding: 24px 16px 60px; }
+
+/* ── Header ── */
+.header { text-align:center; margin-bottom:28px; }
+h1 {
+  font-family: var(--serif);
+  font-size: clamp(1.3rem, 5vw, 2rem);
+  font-weight: 300;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+.tagline {
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ── Tab bar ── */
+.tabs {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.tab {
+  flex: 1;
+  padding: 12px 8px;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-right: 1px solid var(--border);
+}
+.tab:last-child { border-right: none; }
+.tab.active { background: var(--surface2); color: var(--accent); }
+.tab .tab-num { display:block; font-size:0.55rem; color:var(--muted); margin-bottom:2px; }
+.tab.active .tab-num { color: var(--accent); opacity:0.6; }
+.tab.done { color: var(--accent2); }
+.tab.done .tab-num { color: var(--accent2); opacity:0.6; }
+
+/* ── Panels ── */
+.panel { display:none; max-width:600px; margin:0 auto; }
+.panel.active { display:block; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-title {
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 14px 24px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  margin-bottom: 10px;
+  -webkit-appearance: none;
+}
+.btn:active { transform: scale(0.98); }
+.btn.primary { border-color: var(--accent); color: var(--accent); }
+.btn.primary:active { background: var(--accent); color: var(--bg); }
+.btn.success { border-color: var(--accent2); color: var(--accent2); }
+.btn.danger { border-color: var(--danger); color: var(--danger); }
+.btn:disabled { opacity: 0.3; pointer-events: none; }
+.btn.running { border-color: var(--danger); color: var(--danger); }
+.btn.running .btn-icon { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Progress ── */
+.progress-wrap { margin: 12px 0 4px; }
+.progress-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.1s linear;
+  border-radius: 2px;
+}
+.progress-label {
+  font-size: 0.65rem;
+  color: var(--accent2);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+  min-height: 16px;
+}
+
+/* ── Info boxes ── */
+.info-box {
+  font-size: 0.65rem;
+  line-height: 1.7;
+  color: var(--muted);
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px 14px;
+  margin-top: 10px;
+}
+.info-box strong { color: var(--accent); }
+.info-box.warn { border-color: rgba(200,160,64,0.3); background: rgba(200,160,64,0.04); }
+.info-box.warn strong { color: var(--warn); }
+.info-box.ok { border-color: rgba(78,158,138,0.3); background: rgba(78,158,138,0.04); }
+.info-box.ok strong { color: var(--accent2); }
+
+/* ── Upload ── */
+.upload-area {
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  margin-bottom: 10px;
+}
+.upload-area input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  font-size: 16px; /* prevents iOS zoom */
+}
+.upload-area.loaded { border-color: var(--accent2); background: rgba(78,158,138,0.04); }
+.upload-icon { font-size: 2rem; margin-bottom: 8px; }
+.upload-label { font-size: 0.7rem; color: var(--muted); line-height: 1.5; }
+.upload-label strong { color: var(--accent); }
+.file-info { font-size: 0.65rem; color: var(--accent2); margin-top: 8px; }
+
+/* ── Chart ── */
+.chart-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+canvas.spectrum {
+  display: block;
+  min-width: 320px;
+  width: 100%;
+  height: auto;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-top: 12px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+.legend-line { width: 20px; height: 2px; border-radius: 1px; }
+
+/* ── EQ Table ── */
+.eq-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table.eq {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.65rem;
+  min-width: 380px;
+}
+table.eq th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+table.eq td {
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+  line-height: 1.4;
+}
+table.eq tr:last-child td { border-bottom: none; }
+.val-pos { color: #7ec87e; font-weight: 500; }
+.val-neg { color: var(--danger); font-weight: 500; }
+.val-zero { color: var(--muted); }
+.swatch {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 1px;
+  margin-right: 5px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.band-name { font-size: 0.62rem; }
+.band-range { font-size: 0.55rem; color: var(--muted); display: block; }
+
+/* ── Steps indicator (mobile) ── */
+.step-hint {
+  font-size: 0.6rem;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 16px;
+  letter-spacing: 0.08em;
+}
+
+/* ── Sweep params ── */
+.param-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.param-label {
+  font-size: 0.62rem;
+  color: var(--muted);
+  width: 80px;
+  flex-shrink: 0;
+}
+.param-value {
+  font-size: 0.7rem;
+  color: var(--accent);
+  flex: 1;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Room Correction</h1>
+  <p class="tagline">I Cantori delle Cime · Analisi Sala</p>
+</div>
+
+<!-- Tab bar -->
+<div class="tabs">
+  <button class="tab active" id="tab1" onclick="showTab(1)">
+    <span class="tab-num">01</span>Sweep
+  </button>
+  <button class="tab" id="tab2" onclick="showTab(2)">
+    <span class="tab-num">02</span>Analisi
+  </button>
+  <button class="tab" id="tab3" onclick="showTab(3)">
+    <span class="tab-num">03</span>EQ
+  </button>
+</div>
+
+<!-- ═══ PANEL 1: SWEEP ═══ -->
+<div class="panel active" id="panel1">
+
+  <div class="step-hint">Riproduci nella sala · registra con Zoom H6e</div>
+
+  <div class="card">
+    <div class="card-title">Generatore Sine Sweep</div>
+
+    <div class="param-row">
+      <span class="param-label">Range</span>
+      <span class="param-value">80 Hz → 16 kHz</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Durata</span>
+      <span class="param-value">10 secondi</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">Fade</span>
+      <span class="param-value">0.5s in / 0.5s out</span>
+    </div>
+
+    <button class="btn primary" id="btnSweep" onclick="handleSweepBtn()">
+      <span class="btn-icon">▶</span>
+      <span class="btn-label">Avvia Sweep</span>
+    </button>
+
+    <div class="progress-wrap">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-label" id="freqDisplay">—</div>
+    </div>
+  </div>
+
+  <div class="info-box warn">
+    <strong>⚠ Volume</strong><br>
+    Porta il volume iPhone al massimo prima di avviare. Posiziona il telefono nel punto di emissione tipico (leggio, palco).
+  </div>
+
+  <div class="info-box">
+    <strong>Limite speaker iPhone</strong><br>
+    Lo speaker iPhone non riproduce fedelmente sotto ~100 Hz. La banda 20–80 Hz verrà ignorata nell'analisi. Per misure più precise usa uno speaker esterno Bluetooth collegato all'iPhone.
+  </div>
+
+  <div class="info-box ok" style="margin-top:10px">
+    <strong>Come registrare con Zoom H6e</strong><br>
+    Posiziona lo Zoom nel punto tipico di ripresa del coro. Usa i capsule XY o AB. Gain medio, evita clipping. Esporta WAV 44.1 kHz o 48 kHz.
+  </div>
+
+</div>
+
+<!-- ═══ PANEL 2: ANALISI ═══ -->
+<div class="panel" id="panel2">
+
+  <div class="step-hint">Importa il file WAV registrato con Zoom H6e</div>
+
+  <div class="card">
+    <div class="card-title">Carica Registrazione</div>
+
+    <div class="upload-area" id="uploadArea">
+      <input type="file" accept=".wav,.mp3,.aiff,.aif,.flac,.ogg,.m4a" onchange="loadAudioFile(this)" id="fileInput">
+      <div class="upload-icon">🎙</div>
+      <div class="upload-label">
+        Tocca per selezionare il file WAV<br>
+        <strong>dallo Zoom H6e</strong>
+      </div>
+      <div class="file-info" id="fileInfo"></div>
+    </div>
+
+    <button class="btn success" id="btnAnalyze" onclick="runAnalysis()" disabled>
+      <span>⟳</span> Analizza Spettro
+    </button>
+
+    <div class="progress-wrap" id="analyzeProgress" style="display:none">
+      <div class="progress-bar">
+        <div class="progress-fill" id="analyzeFill"></div>
+      </div>
+      <div class="progress-label" id="analyzeStatus">Elaborazione…</div>
+    </div>
+  </div>
+
+  <div class="card" id="chartCard">
+    <div class="card-title">Risposta Spettrale</div>
+    <div class="chart-container">
+      <canvas class="spectrum" id="specCanvas" width="560" height="300"></canvas>
+    </div>
+    <div class="chart-legend">
+      <div class="legend-item">
+        <div class="legend-line" style="background:#c8a96e"></div>
+        Rilevata
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="background:#4e9e8a"></div>
+        Target
+      </div>
+      <div class="legend-item">
+        <div class="legend-line" style="background:#5a6070;opacity:0.6"></div>
+        Pink noise ref
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ PANEL 3: EQ ═══ -->
+<div class="panel" id="panel3">
+
+  <div class="step-hint">Valori da inserire in DaVinci Resolve · Fairlight EQ</div>
+
+  <div class="card">
+    <div class="card-title">Correzione EQ Suggerita</div>
+    <div class="eq-table-wrap">
+      <table class="eq">
+        <thead>
+          <tr>
+            <th>Banda</th>
+            <th>Freq.</th>
+            <th>Guadagno</th>
+            <th>Q</th>
+            <th>Filtro</th>
+          </tr>
+        </thead>
+        <tbody id="eqBody">
+          <tr>
+            <td colspan="5" style="color:var(--muted);text-align:center;padding:20px;font-size:0.65rem">
+              Completa l'analisi per generare la tabella
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="info-box ok">
+    <strong>Come applicare in DaVinci Resolve</strong><br>
+    Fairlight → traccia coro → EQ a 6 bande.<br>
+    1. Imposta High-Pass a 80 Hz (sempre, indipendentemente dalla misura)<br>
+    2. Inserisci frequenza, guadagno e Q per ogni banda con priorità Alta o Media<br>
+    3. Affina ad orecchio — i valori sono orientativi
+  </div>
+
+  <div class="info-box warn" style="margin-top:10px">
+    <strong>⚠ Ricorda</strong><br>
+    La curva include la risposta dello Zoom H6e. Stai correggendo il sistema complessivo sala + microfono, non solo la stanza. Mantieni la stessa posizione del microfono per le registrazioni future.
+  </div>
+
+</div>
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────────────────
+const SWEEP_DURATION = 10;
+const FREQ_START = 80;
+const FREQ_END = 16000;
+
+const TARGET_BANDS = [
+  { label:"Sub/Rumore",      range:"20–80 Hz",      fLo:20,    fHi:80,    fMid:50,    dbTarget:-25, color:"#5a6070" },
+  { label:"Fondamentali",    range:"80–200 Hz",      fLo:80,    fHi:200,   fMid:130,   dbTarget:-12, color:"#7e9e8a" },
+  { label:"Calore",          range:"200–500 Hz",     fLo:200,   fHi:500,   fMid:320,   dbTarget:-10, color:"#c8a96e" },
+  { label:"Intelligibilità", range:"500 Hz–2 kHz",   fLo:500,   fHi:2000,  fMid:1000,  dbTarget:-7,  color:"#e8c87e" },
+  { label:"Presenza",        range:"2–5 kHz",        fLo:2000,  fHi:5000,  fMid:3200,  dbTarget:-12, color:"#9eb8c8" },
+  { label:"Aria",            range:"5–10 kHz",       fLo:5000,  fHi:10000, fMid:7000,  dbTarget:-20, color:"#7888a8" },
+  { label:"Aria residua",    range:"> 10 kHz",       fLo:10000, fHi:20000, fMid:15000, dbTarget:-30, color:"#4a5570" },
+];
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let audioCtx = null;
+let sweepSource = null;
+let sweepRunning = false;
+let sweepStartTime = 0;
+let loadedBuffer = null;
+let analysisResult = null;
+
+// ─── Tab navigation ───────────────────────────────────────────────────────────
+function showTab(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('panel'+i).classList.toggle('active', i===n);
+    document.getElementById('tab'+i).classList.toggle('active', i===n);
+  });
+}
+
+// ─── Audio Context ────────────────────────────────────────────────────────────
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+// ─── Sweep ────────────────────────────────────────────────────────────────────
+function handleSweepBtn() {
+  if (sweepRunning) { stopSweep(); return; }
+  startSweep();
+}
+
+function startSweep() {
+  const ctx = getCtx();
+  const sr = ctx.sampleRate;
+  const N = Math.ceil(SWEEP_DURATION * sr);
+  const buf = ctx.createBuffer(1, N, sr);
+  const d = buf.getChannelData(0);
+  const fadeLen = Math.ceil(0.5 * sr);
+  const logR = Math.log(FREQ_END / FREQ_START);
+
+  for (let i = 0; i < N; i++) {
+    const t = i / sr;
+    const phase = 2 * Math.PI * FREQ_START * SWEEP_DURATION / logR *
+                  (Math.exp(t / SWEEP_DURATION * logR) - 1);
+    let amp = 1;
+    if (i < fadeLen) amp = i / fadeLen;
+    else if (i > N - fadeLen) amp = (N - i) / fadeLen;
+    d[i] = Math.sin(phase) * amp * 0.9;
+  }
+
+  sweepSource = ctx.createBufferSource();
+  sweepSource.buffer = buf;
+  sweepSource.connect(ctx.destination);
+  sweepSource.start();
+  sweepRunning = true;
+  sweepStartTime = ctx.currentTime;
+
+  const btn = document.getElementById('btnSweep');
+  btn.innerHTML = '<span class="btn-icon">◼</span><span class="btn-label">Stop</span>';
+  btn.classList.add('running');
+  btn.classList.remove('primary');
+
+  requestAnimationFrame(tickSweep);
+  sweepSource.onended = () => { if (sweepRunning) stopSweep(); };
+}
+
+function stopSweep() {
+  try { if (sweepSource) sweepSource.stop(); } catch(e) {}
+  sweepRunning = false;
+  const btn = document.getElementById('btnSweep');
+  btn.innerHTML = '<span class="btn-icon">▶</span><span class="btn-label">Avvia Sweep</span>';
+  btn.classList.remove('running');
+  btn.classList.add('primary');
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('freqDisplay').textContent = 'Sweep completato ✓  — ora registra con Zoom H6e';
+  document.getElementById('tab2').classList.add('done');
+}
+
+function tickSweep() {
+  if (!sweepRunning) return;
+  const elapsed = audioCtx.currentTime - sweepStartTime;
+  const p = Math.min(elapsed / SWEEP_DURATION, 1);
+  document.getElementById('progressFill').style.width = (p * 100) + '%';
+  const logR = Math.log(FREQ_END / FREQ_START);
+  const f = FREQ_START * Math.exp(p * logR);
+  document.getElementById('freqDisplay').textContent =
+    f < 1000 ? f.toFixed(0) + ' Hz' : (f/1000).toFixed(2) + ' kHz';
+  if (p < 1) requestAnimationFrame(tickSweep);
+}
+
+// ─── File Load ────────────────────────────────────────────────────────────────
+function loadAudioFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const info = document.getElementById('fileInfo');
+  info.textContent = '⏳ Caricamento…';
+  document.getElementById('uploadArea').classList.remove('loaded');
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const ctx = getCtx();
+    ctx.decodeAudioData(e.target.result.slice(0)).then(buf => {
+      loadedBuffer = buf;
+      const dur = buf.duration.toFixed(1);
+      const sr = (buf.sampleRate/1000).toFixed(1);
+      const ch = buf.numberOfChannels;
+      info.textContent = `✓ ${file.name}  ·  ${dur}s  ·  ${sr} kHz  ·  ${ch}ch`;
+      document.getElementById('uploadArea').classList.add('loaded');
+      document.getElementById('btnAnalyze').disabled = false;
+    }).catch(err => {
+      info.textContent = `✗ Errore: ${err.message}`;
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ─── Analysis ────────────────────────────────────────────────────────────────
+function runAnalysis() {
+  if (!loadedBuffer) return;
+  document.getElementById('analyzeProgress').style.display = 'block';
+  document.getElementById('btnAnalyze').disabled = true;
+
+  const buf = loadedBuffer;
+  const sr = buf.sampleRate;
+  const data = buf.getChannelData(0);
+  const fftSize = 16384;
+  const freqRes = sr / fftSize;
+  const freqBins = fftSize / 2;
+
+  const totalFrames = Math.floor((data.length - fftSize) / (fftSize / 2));
+  const numSamples = Math.min(totalFrames, 30);
+  const step = Math.max(1, Math.floor(totalFrames / numSamples));
+  const hann = makeHann(fftSize);
+  const magAccum = new Float32Array(freqBins);
+  let framesDone = 0;
+
+  function processChunk() {
+    const batchSize = 5;
+    for (let b = 0; b < batchSize && framesDone < numSamples; b++, framesDone++) {
+      const offset = framesDone * step * (fftSize / 2);
+      if (offset + fftSize > data.length) break;
+
+      // Extract windowed frame
+      const frame = new Float32Array(fftSize);
+      for (let i = 0; i < fftSize; i++) frame[i] = data[offset + i] * hann[i];
+
+      // DFT via OfflineAudioContext analyser — use real FFT
+      const mag = computeFFTMag(frame, fftSize);
+      for (let i = 0; i < freqBins; i++) magAccum[i] += mag[i];
+    }
+
+    const pct = (framesDone / numSamples * 100).toFixed(0);
+    document.getElementById('analyzeFill').style.width = pct + '%';
+    document.getElementById('analyzeStatus').textContent = `Analisi frame ${framesDone}/${numSamples}…`;
+
+    if (framesDone < numSamples) {
+      setTimeout(processChunk, 10);
+    } else {
+      // Average
+      const averaged = new Float32Array(freqBins);
+      for (let i = 0; i < freqBins; i++) {
+        averaged[i] = magAccum[i] > 0 ? 20 * Math.log10(magAccum[i] / numSamples + 1e-10) : -100;
+      }
+      finishAnalysis(averaged, freqRes, sr);
+    }
+  }
+
+  processChunk();
+}
+
+// Simple FFT magnitude using Cooley-Tukey
+function makeHann(N) {
+  const w = new Float32Array(N);
+  for (let i = 0; i < N; i++) w[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (N-1)));
+  return w;
+}
+
+function computeFFTMag(input, N) {
+  // Use AnalyserNode trick via a short offline context
+  // This is synchronous-equivalent via pre-computed approach
+  // For performance on mobile: use a simplified real FFT
+  const re = new Float64Array(N);
+  const im = new Float64Array(N);
+  for (let i = 0; i < N; i++) re[i] = input[i];
+
+  fftInPlace(re, im, N);
+
+  const mag = new Float32Array(N / 2);
+  for (let i = 0; i < N / 2; i++) {
+    mag[i] = Math.sqrt(re[i]*re[i] + im[i]*im[i]) / N;
+  }
+  return mag;
+}
+
+function fftInPlace(re, im, N) {
+  // Bit-reversal permutation
+  let j = 0;
+  for (let i = 1; i < N; i++) {
+    let bit = N >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      [re[i], re[j]] = [re[j], re[i]];
+      [im[i], im[j]] = [im[j], im[i]];
+    }
+  }
+  // FFT butterfly
+  for (let len = 2; len <= N; len <<= 1) {
+    const ang = -2 * Math.PI / len;
+    const wRe = Math.cos(ang), wIm = Math.sin(ang);
+    for (let i = 0; i < N; i += len) {
+      let curRe = 1, curIm = 0;
+      for (let k = 0; k < len/2; k++) {
+        const uRe = re[i+k], uIm = im[i+k];
+        const vRe = re[i+k+len/2]*curRe - im[i+k+len/2]*curIm;
+        const vIm = re[i+k+len/2]*curIm + im[i+k+len/2]*curRe;
+        re[i+k] = uRe + vRe; im[i+k] = uIm + vIm;
+        re[i+k+len/2] = uRe - vRe; im[i+k+len/2] = uIm - vIm;
+        const newRe = curRe*wRe - curIm*wIm;
+        curIm = curRe*wIm + curIm*wRe;
+        curRe = newRe;
+      }
+    }
+  }
+}
+
+function finishAnalysis(averaged, freqRes, sr) {
+  // Compute band averages
+  const freqBins = averaged.length;
+  const bandAvg = TARGET_BANDS.map(band => {
+    const lo = Math.max(1, Math.floor(band.fLo / freqRes));
+    const hi = Math.min(freqBins-1, Math.ceil(band.fHi / freqRes));
+    let sum = 0, cnt = 0;
+    for (let b = lo; b <= hi; b++) {
+      if (averaged[b] > -90) { sum += averaged[b]; cnt++; }
+    }
+    return cnt > 0 ? sum / cnt : -60;
+  });
+
+  // Normalize: anchor intelligibility band (index 3) to target
+  const normOffset = TARGET_BANDS[3].dbTarget - bandAvg[3];
+  const normBandAvg = bandAvg.map(v => v + normOffset);
+  const normFFT = averaged.map(v => v + normOffset);
+
+  analysisResult = { normFFT, normBandAvg, freqRes };
+
+  drawSpectrum(normFFT, normBandAvg, freqRes);
+  buildEQTable(normBandAvg);
+
+  document.getElementById('analyzeStatus').textContent = 'Analisi completata ✓';
+  document.getElementById('analyzeFill').style.width = '100%';
+  document.getElementById('tab3').classList.add('done');
+  document.getElementById('btnAnalyze').disabled = false;
+
+  // Auto-navigate to EQ tab after short delay
+  setTimeout(() => showTab(3), 800);
+}
+
+// ─── Drawing ──────────────────────────────────────────────────────────────────
+const PAD = { top:20, right:16, bottom:44, left:44 };
+
+function fx(f, W) {
+  const CW = W - PAD.left - PAD.right;
+  return PAD.left + Math.log10(f/20) / Math.log10(20000/20) * CW;
+}
+function dy(db, H) {
+  const CH = H - PAD.top - PAD.bottom;
+  return PAD.top + (db - 0) / (-50 - 0) * CH;
+}
+
+function drawSpectrum(fftData, bandData, freqRes) {
+  const canvas = document.getElementById('specCanvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const CW = W - PAD.left - PAD.right, CH = H - PAD.top - PAD.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0f1215';
+  ctx.fillRect(0, 0, W, H);
+
+  // dB grid
+  [-0,-10,-20,-30,-40,-50].forEach(db => {
+    const y = dy(db, H);
+    ctx.strokeStyle = db === 0 ? '#252b35' : '#181d25';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left+CW, y); ctx.stroke();
+    ctx.fillStyle = '#3a4255';
+    ctx.font = `10px DM Mono,monospace`;
+    ctx.textAlign = 'right';
+    ctx.fillText(db+'', PAD.left-5, y+3);
+  });
+
+  // Freq grid
+  [100,200,500,1000,2000,5000,10000].forEach(f => {
+    const x = fx(f, W);
+    ctx.strokeStyle = '#181d25';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, PAD.top+CH); ctx.stroke();
+    ctx.fillStyle = '#3a4255';
+    ctx.font = '10px DM Mono,monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(f>=1000?(f/1000)+'k':f+'', x, PAD.top+CH+16);
+  });
+
+  // Hz label
+  ctx.fillStyle = '#3a4255';
+  ctx.font = '10px DM Mono,monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Hz', PAD.left+CW/2, H-4);
+
+  // Vocal range
+  const vx1 = fx(82, W), vx2 = fx(523, W);
+  const vg = ctx.createLinearGradient(vx1,0,vx2,0);
+  vg.addColorStop(0,'rgba(200,169,110,0.03)');
+  vg.addColorStop(0.5,'rgba(200,169,110,0.07)');
+  vg.addColorStop(1,'rgba(200,169,110,0.03)');
+  ctx.fillStyle = vg;
+  ctx.fillRect(vx1, PAD.top, vx2-vx1, CH);
+
+  // Pink noise ref
+  ctx.beginPath();
+  let first = true;
+  for (let f = 80; f <= 16000; f *= 1.05) {
+    const db = -3 * Math.log2(f/80) - 7;
+    const x = fx(f, W), y = dy(Math.max(db,-50), H);
+    if (first) { ctx.moveTo(x,y); first=false; } else ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle = 'rgba(90,96,112,0.45)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3,4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Target curve
+  const tpts = [{f:80,db:-25},...TARGET_BANDS.map(b=>({f:b.fMid,db:b.dbTarget})),{f:18000,db:-32}];
+  ctx.beginPath();
+  ctx.moveTo(fx(tpts[0].f,W), dy(tpts[0].db,H));
+  for (let i=1;i<tpts.length;i++) {
+    const p=tpts[i-1],c=tpts[i];
+    const cpx=(fx(p.f,W)+fx(c.f,W))/2;
+    ctx.bezierCurveTo(cpx,dy(p.db,H),cpx,dy(c.db,H),fx(c.f,W),dy(c.db,H));
+  }
+  ctx.strokeStyle='rgba(78,158,138,0.75)';
+  ctx.lineWidth=1.5;
+  ctx.setLineDash([5,4]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Measured curve
+  const smooth = 20;
+  const bins = fftData.length;
+
+  // Fill
+  ctx.beginPath();
+  first = true;
+  for (let b=2;b<bins;b++) {
+    const f = b * freqRes;
+    if (f<70||f>17000) continue;
+    let s=0,c=0;
+    for(let k=Math.max(0,b-smooth);k<=Math.min(bins-1,b+smooth);k++){if(fftData[k]>-90){s+=fftData[k];c++;}}
+    if(!c) continue;
+    const db=s/c;
+    const x=fx(f,W),y=dy(Math.max(db,-50),H);
+    if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
+  }
+  ctx.lineTo(fx(17000,W),PAD.top+CH);
+  ctx.lineTo(fx(70,W),PAD.top+CH);
+  ctx.closePath();
+  const mg=ctx.createLinearGradient(0,PAD.top,0,PAD.top+CH);
+  mg.addColorStop(0,'rgba(200,169,110,0.2)');
+  mg.addColorStop(1,'rgba(200,169,110,0.01)');
+  ctx.fillStyle=mg;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  first=true;
+  for(let b=2;b<bins;b++){
+    const f=b*freqRes;
+    if(f<70||f>17000) continue;
+    let s=0,c=0;
+    for(let k=Math.max(0,b-smooth);k<=Math.min(bins-1,b+smooth);k++){if(fftData[k]>-90){s+=fftData[k];c++;}}
+    if(!c) continue;
+    const db=s/c;
+    const x=fx(f,W),y=dy(Math.max(db,-50),H);
+    if(first){ctx.moveTo(x,y);first=false;}else ctx.lineTo(x,y);
+  }
+  ctx.strokeStyle='#c8a96e';
+  ctx.lineWidth=2;
+  ctx.shadowColor='rgba(200,169,110,0.25)';
+  ctx.shadowBlur=5;
+  ctx.stroke();
+  ctx.shadowBlur=0;
+
+  // Band dots
+  bandData.forEach((db,i)=>{
+    const band=TARGET_BANDS[i];
+    if(band.fMid<80) return;
+    const x=fx(band.fMid,W),y=dy(Math.max(db,-50),H);
+    ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);
+    ctx.fillStyle=band.color;ctx.fill();
+    ctx.strokeStyle='#0f1215';ctx.lineWidth=1.5;ctx.stroke();
+  });
+}
+
+// ─── EQ Table ────────────────────────────────────────────────────────────────
+function buildEQTable(bandData) {
+  const tbody = document.getElementById('eqBody');
+  tbody.innerHTML = '';
+  bandData.forEach((measured, i) => {
+    const band = TARGET_BANDS[i];
+    const diff = Math.round((band.dbTarget - measured) * 10) / 10;
+    const isUnreliable = band.fMid < 80;
+    let cls = 'val-zero', txt = '—';
+    if (!isUnreliable) {
+      cls = diff > 1 ? 'val-pos' : diff < -1 ? 'val-neg' : 'val-zero';
+      txt = (diff > 0 ? '+' : '') + diff + ' dB';
+    }
+    const q = band.fMid<200 ? '0.7' : band.fMid<2000 ? '1.0' : '1.4';
+    const ftype = i===0 ? 'HP 80Hz' : i===bandData.length-1 ? 'Shelf H' : 'Bell';
+    const pri = isUnreliable ? '—' :
+      Math.abs(diff)>4 ? '🔴' : Math.abs(diff)>2 ? '🟡' : '🟢';
+    const fLabel = band.fMid>=1000 ? (band.fMid/1000).toFixed(1)+'k' : band.fMid+'';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><span class="swatch" style="background:${band.color}"></span>
+          <span class="band-name">${band.label}<span class="band-range">${band.range}</span></span></td>
+      <td>${fLabel} Hz</td>
+      <td class="${cls}">${isUnreliable ? '<span style="color:var(--muted)">n/d</span>' : txt}</td>
+      <td style="color:var(--muted)">${isUnreliable ? '—' : q}</td>
+      <td style="color:var(--muted);font-size:0.58rem">${ftype} ${pri}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ─── Init canvas placeholder ──────────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('specCanvas');
+  const ctx = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  ctx.fillStyle='#0f1215';
+  ctx.fillRect(0,0,W,H);
+  [-0,-10,-20,-30,-40,-50].forEach(db=>{
+    ctx.strokeStyle='#181d25';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(PAD.left,dy(db,H));ctx.lineTo(W-PAD.right,dy(db,H));ctx.stroke();
+    ctx.fillStyle='#3a4255';ctx.font='10px monospace';ctx.textAlign='right';
+    ctx.fillText(db+'',PAD.left-5,dy(db,H)+3);
+  });
+  // Target preview
+  const tpts=[{f:80,db:-25},...TARGET_BANDS.map(b=>({f:b.fMid,db:b.dbTarget})),{f:18000,db:-32}];
+  ctx.beginPath();
+  ctx.moveTo(fx(tpts[0].f,W),dy(tpts[0].db,H));
+  for(let i=1;i<tpts.length;i++){
+    const p=tpts[i-1],c=tpts[i];
+    const cpx=(fx(p.f,W)+fx(c.f,W))/2;
+    ctx.bezierCurveTo(cpx,dy(p.db,H),cpx,dy(c.db,H),fx(c.f,W),dy(c.db,H));
+  }
+  ctx.strokeStyle='rgba(78,158,138,0.45)';ctx.lineWidth=1.5;
+  ctx.setLineDash([5,4]);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='rgba(78,158,138,0.35)';ctx.font='11px monospace';
+  ctx.textAlign='center';
+  ctx.fillText('Carica file WAV per vedere la risposta rilevata',(PAD.left+(W-PAD.right))/2,H/2);
+})();
+</script>
+</body>
+</html>
