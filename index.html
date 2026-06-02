@@ -463,14 +463,25 @@ function handleSweepBtn() {
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
-  // iOS Safari: unlock con buffer silenzioso E avvio sincrono (no .then())
-  const silentBuf = audioCtx.createBuffer(1, 1, 22050);
-  const silentSrc = audioCtx.createBufferSource();
-  silentSrc.buffer = silentBuf;
-  silentSrc.connect(audioCtx.destination);
-  silentSrc.start(0);
-  audioCtx.resume();
-  startSweep();
+  // iOS: forza la sessione audio in modalità "playback" (ignora silent switch)
+  // tramite un elemento <audio> HTML con un file vuoto
+  if (!window._iosAudioUnlocked) {
+    window._iosAudioUnlocked = true;
+    const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAA' +
+      'EAAQAAwF0AAIC7AAACABAAZGFUYQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==');
+    a.play().catch(() => {});
+  }
+  if (audioCtx.state === 'running') {
+    startSweep();
+  } else {
+    audioCtx.onstatechange = () => {
+      if (audioCtx.state === 'running') {
+        audioCtx.onstatechange = null;
+        startSweep();
+      }
+    };
+    audioCtx.resume();
+  }
 }
 function startSweep() {
   const ctx = getCtx();
@@ -840,6 +851,6 @@ function buildEQTable(bandData) {
   ctx.fillText('Carica file WAV per vedere la risposta rilevata',(PAD.left+(W-PAD.right))/2,H/2);
 })();
 </script>
-<div style="text-align:center;margin-top:40px;font-size:0.65rem;color:#525a68;letter-spacing:0.15em;">v1.2</div>
+<div style="text-align:center;margin-top:40px;font-size:0.65rem;color:#525a68;letter-spacing:0.15em;">v1.3</div>
 </body>
 </html>
